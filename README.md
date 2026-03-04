@@ -235,7 +235,7 @@ All configuration is managed through the `.env` file:
 ## 📁 Project Structure
 
 ```
-pulse-dashboard/
+VitalSync-dashboard/
 ├── Arduino/
 │   └── pulse.ino          # Arduino firmware (sensor reading, ISR, serial protocol)
 ├── public/
