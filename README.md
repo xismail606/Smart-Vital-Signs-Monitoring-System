@@ -122,7 +122,7 @@ The system is designed for health monitoring, educational demonstrations, and Io
 
 ## Circuit Wiring Diagram
 
-![Circuit Diagram](https://raw.githubusercontent.com/xismail606/Smart-Heart-Rate-Monitoring-System/main/Arduino/606.png)
+![Circuit Diagram](https://raw.githubusercontent.com/xismail606/Smart-Heart-Rate-Monitoring-System/main/Arduino/606x.png)
 
 ---
 
@@ -143,7 +143,7 @@ The system is designed for health monitoring, educational demonstrations, and Io
 
 ```bash
 git clone https://github.com/xismail606/Smart-Heart-Rate-Monitoring-System.git
-cd pulse-dashboard
+cd VitalSync-dashboard
 ```
 
 ### 2. Install Dependencies
@@ -235,7 +235,7 @@ All configuration is managed through the `.env` file:
 ## 📁 Project Structure
 
 ```
-pulse-dashboard/
+VitalSync-dashboard/
 ├── Arduino/
 │   └── pulse.ino          # Arduino firmware (sensor reading, ISR, serial protocol)
 ├── public/
