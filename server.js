@@ -92,7 +92,7 @@ function connectSerial() {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Socket.IO ──
-const VALID_COMMANDS = ['pause', 'resume', 'reset'];
+const VALID_COMMANDS = ['pause', 'resume', 'reset', 'pause_bpm', 'resume_bpm', 'pause_temp', 'resume_temp'];
 
 io.on('connection', (socket) => {
   console.log('🌐 Browser connected:', socket.id);
@@ -105,7 +105,12 @@ io.on('connection', (socket) => {
     }
     if (serialPort && serialPort.isOpen) {
       serialPort.write(cmd.toUpperCase() + '\n');
-      console.log(`${cmd === 'pause' ? '⏸' : cmd === 'reset' ? '🔄' : '▶'} ${cmd.toUpperCase()} sent to Arduino`);
+      const icons = {
+        pause: '⏸', resume: '▶', reset: '🔄',
+        pause_bpm: '💔', resume_bpm: '💓',
+        pause_temp: '🌡️⏸', resume_temp: '🌡️▶'
+      };
+      console.log(`${icons[cmd] || '📡'} ${cmd.toUpperCase()} sent to Arduino`);
     }
   });
 

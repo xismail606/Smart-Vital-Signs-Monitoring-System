@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,49 +7,142 @@
       name="description"
       content="Real-time heart rate & body temperature monitoring dashboard — Track your pulse and temperature using Arduino sensors"
     />
-    <meta name="theme-color" content="#0a0a0f" />
-    <title>VitalSync</title>
+    <meta name="theme-color" content="#0a0a0f" id="metaThemeColor" />
+    <title>VitalSync — Real-time Vital Signs Monitor</title>
+
+    <!-- Prevent flash of wrong theme -->
+    <script>
+      (function() {
+        var saved = localStorage.getItem('vitalsync-theme');
+        if (saved === 'light') {
+          document.documentElement.classList.remove('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#f0f2f8');
+        }
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💓</text></svg>"
     />
+    <!-- Tailwind CSS v3 CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                bg: 'var(--color-bg)',
+                card: 'var(--color-card)',
+                'card-hover': 'var(--color-card-hover)',
+                border: 'var(--color-border)',
+                red: '#ff2d55',
+                green: '#00ff88',
+                yellow: '#ffd60a',
+                blue: '#5ac8fa',
+                orange: '#ff9500',
+                muted: 'var(--color-muted)',
+                text: 'var(--color-text)',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['Space Mono', 'monospace'],
+            },
+            animation: {
+              heartbeat: 'heartbeat 1s ease-in-out infinite',
+              'beat-pop': 'beat-pop 0.3s ease-out',
+              'pulse-dot': 'pulse-dot 1s infinite',
+              blink: 'blink 1.5s infinite',
+              'temp-pulse': 'temp-pulse 2s ease-in-out infinite',
+              'fade-in-up': 'fadeInUp 0.4s ease-out',
+              'glow-pulse': 'glowPulse 2s ease-in-out infinite',
+            },
+            keyframes: {
+              heartbeat: {
+                '0%, 100%': { transform: 'scale(1)' },
+                '15%': { transform: 'scale(1.25)' },
+                '30%': { transform: 'scale(1)' },
+                '45%': { transform: 'scale(1.15)' },
+              },
+              'beat-pop': {
+                '0%': { transform: 'scale(1)' },
+                '40%': { transform: 'scale(1.05)' },
+                '100%': { transform: 'scale(1)' },
+              },
+              'pulse-dot': {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.3' },
+              },
+              blink: {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.3' },
+              },
+              'temp-pulse': {
+                '0%, 100%': { transform: 'scale(1)' },
+                '50%': { transform: 'scale(1.1)' },
+              },
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              glowPulse: {
+                '0%, 100%': { boxShadow: '0 0 15px rgba(255,45,85,0.2)' },
+                '50%': { boxShadow: '0 0 30px rgba(255,45,85,0.4)' },
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="stylesheet" href="style.css" />
     <script src="/socket.io/socket.io.js"></script>
   </head>
-  <body>
+  <body class="bg-brand-bg text-brand-text font-sans min-h-screen overflow-x-hidden relative transition-colors duration-300">
+
+    <!-- Grid Overlay Background -->
+    <div class="grid-overlay"></div>
+
+    <!-- Ambient glow top -->
+    <div class="ambient-glow"></div>
+
     <noscript>
-      <p
-        style="
-          color: #fff;
-          text-align: center;
-          padding: 40px;
-          font-size: 1.2rem;
-        "
-      >
+      <p class="text-center p-10 text-lg" style="color: var(--color-text)">
         JavaScript is required to run VitalSync Dashboard.
       </p>
     </noscript>
-    <div class="container">
-      <header>
-        <div class="logo">
-          <span class="logo-icon">💓</span>
-          <h1>Vital<span>Sync</span></h1>
+
+    <div class="relative z-10 max-w-[1200px] mx-auto px-5 py-8">
+
+      <!-- ═══ HEADER ═══ -->
+      <header class="flex items-center justify-between mb-10 pb-5 border-b border-brand-border flex-wrap gap-3 transition-colors duration-300">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl animate-heartbeat select-none">💓</span>
+          <h1 class="text-2xl font-black tracking-tight">
+            Vital<span class="text-brand-red">Sync</span>
+          </h1>
         </div>
-        <div class="header-controls">
+        <div class="flex items-center gap-2.5 flex-wrap" id="headerControls">
+          <!-- Reset -->
           <button
-            class="ctrl-btn reset-btn"
+            class="ctrl-btn group"
             id="resetBtn"
             onclick="resetDashboard()"
             title="Reset Session"
           >
-            <span>🔄</span>
+            <span class="group-hover:rotate-180 transition-transform duration-300">🔄</span>
             <span>Reset</span>
           </button>
+          <!-- Export -->
           <button
             class="ctrl-btn export-btn"
             id="exportBtn"
@@ -59,6 +152,7 @@
             <span>📥</span>
             <span>Export</span>
           </button>
+          <!-- Fullscreen -->
           <button
             class="ctrl-btn fullscreen-btn"
             onclick="toggleFullscreen()"
@@ -66,6 +160,16 @@
           >
             <span id="fsIcon">⛶</span>
           </button>
+          <!-- Theme Toggle -->
+          <button
+            class="ctrl-btn theme-toggle-btn"
+            onclick="toggleTheme()"
+            title="Toggle Light/Dark Mode"
+            id="themeToggleBtn"
+          >
+            <span id="themeIcon">☀️</span>
+          </button>
+          <!-- Pause/Resume -->
           <button
             class="ctrl-btn pause-btn"
             id="pauseBtn"
@@ -74,116 +178,170 @@
             <span id="pauseIcon">⏸</span>
             <span id="pauseText">Pause</span>
           </button>
+          <!-- Status Pill -->
           <div class="status-pill">
-            <div class="status-dot" id="statusDot"></div>
+            <div class="w-2 h-2 rounded-full transition-all duration-400" id="statusDot" style="background: var(--color-muted)"></div>
             <span id="statusText">Waiting for connection...</span>
           </div>
         </div>
       </header>
 
+      <!-- ═══ ALERT BANNER (High BPM) ═══ -->
       <div class="alert-banner" id="alertBanner">
-        <span>🚨</span>
+        <span class="text-2xl">🚨</span>
         <div class="msg">
           Warning: High heart rate! <span>Please rest and relax</span>
         </div>
       </div>
 
-      <div class="bpm-card" id="bpmCard">
-        <div class="paused-badge" id="pausedBadge">PAUSED</div>
-        <div class="bpm-label">Heart Rate</div>
-        <div class="bpm-value" id="bpmValue">---</div>
-        <div class="bpm-unit">BPM</div>
-        <div class="waiting" id="waitingMsg">
-          Place your finger on the sensor...
-        </div>
-      </div>
+      <!-- ═══ MAIN VITALS GRID ═══ -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
 
-      <div class="temp-card" id="tempCard">
-        <div class="temp-icon">🌡️</div>
-        <div class="temp-info">
-          <div class="temp-label">Body Temperature</div>
-          <div class="temp-value-row">
-            <span class="temp-value" id="tempValue">--.-</span>
-            <span class="temp-unit">°C</span>
+        <!-- BPM Card (takes 2 columns) -->
+        <div class="bpm-card md:col-span-2" id="bpmCard">
+          <div class="paused-badge" id="pausedBadge">PAUSED</div>
+          <!-- Toggle BPM monitoring -->
+          <button class="sensor-toggle active" id="bpmToggle" onclick="toggleBpmMonitoring()" title="Toggle BPM Monitoring">
+            <span id="bpmToggleIcon">❤️</span>
+            <span id="bpmToggleText">ON</span>
+          </button>
+          <!-- Decorative corner accents -->
+          <div class="corner-accent corner-tl"></div>
+          <div class="corner-accent corner-br"></div>
+
+          <div class="bpm-label">Heart Rate</div>
+          <div class="bpm-value" id="bpmValue">--</div>
+          <div class="bpm-unit">BPM</div>
+          <div class="waiting" id="waitingMsg">
+            Place your finger on the sensor...
+          </div>
+          <!-- Stopped overlay -->
+          <div class="sensor-stopped-overlay" id="bpmStoppedOverlay">
+            <span>⏹</span> BPM Monitoring Stopped
           </div>
         </div>
-        <div class="temp-status" id="tempStatus">Waiting for sensor...</div>
+
+        <!-- Temperature Card (takes 1 column) -->
+        <div class="temp-card" id="tempCard">
+          <!-- Toggle Temperature monitoring -->
+          <button class="sensor-toggle temp-toggle active" id="tempToggle" onclick="toggleTempMonitoring()" title="Toggle Temperature Monitoring">
+            <span id="tempToggleIcon">🌡️</span>
+            <span id="tempToggleText">ON</span>
+          </button>
+          <div class="flex flex-col items-center gap-3 w-full">
+            <div class="text-5xl animate-temp-pulse select-none">🌡️</div>
+            <div class="temp-label">Body Temperature</div>
+            <div class="flex items-baseline gap-1">
+              <span class="temp-value" id="tempValue">--.-</span>
+              <span class="temp-unit">°C</span>
+            </div>
+            <div class="temp-status" id="tempStatus">Waiting for sensor...</div>
+          </div>
+          <!-- Stopped overlay -->
+          <div class="sensor-stopped-overlay" id="tempStoppedOverlay">
+            <span>⏹</span> Temp Monitoring Stopped
+          </div>
+        </div>
+
       </div>
 
+      <!-- ═══ FEVER BANNER ═══ -->
       <div class="fever-banner" id="feverBanner">
-        <span>🔥</span>
+        <span class="text-2xl">🔥</span>
         <div class="msg">
           Warning: High temperature detected!
           <span>Consider seeking medical attention</span>
         </div>
       </div>
 
+      <!-- ═══ SESSION BAR ═══ -->
       <div class="session-bar">
-        <div>
-          <span class="label">⏱ Session Start: </span
-          ><span class="value" id="sessionStart">--:--:--</span>
+        <div class="flex items-center gap-2">
+          <span>⏱</span>
+          <span class="session-label">Session Start:</span>
+          <span class="session-value" id="sessionStart">--:--:--</span>
         </div>
-        <div>
-          <span class="label">⏳ Duration: </span
-          ><span class="value" id="sessionDuration">00:00</span>
+        <div class="flex items-center gap-2">
+          <span>⏳</span>
+          <span class="session-label">Duration:</span>
+          <span class="session-value" id="sessionDuration">00:00</span>
         </div>
-        <div>
-          <span class="label">📊 Readings: </span
-          ><span class="value" id="readingCount">0</span>
+        <div class="flex items-center gap-2">
+          <span>📊</span>
+          <span class="session-label">Readings:</span>
+          <span class="session-value" id="readingCount">0</span>
         </div>
       </div>
 
+      <!-- ═══ STATS ROW ═══ -->
       <div class="stats-row">
-        <div class="stat-card">
+        <div class="stat-card group">
+          <div class="stat-icon">❤️</div>
           <div class="stat-label">Status</div>
           <div class="stat-value" id="statusValue">—</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card group">
+          <div class="stat-icon">📈</div>
           <div class="stat-label">Max</div>
           <div class="stat-value" id="maxValue">—</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card group">
+          <div class="stat-icon">📉</div>
           <div class="stat-label">Min</div>
           <div class="stat-value" id="minValue">—</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card group">
+          <div class="stat-icon">📊</div>
           <div class="stat-label">Average</div>
           <div class="stat-value" id="avgValue">—</div>
         </div>
-        <div class="stat-card temp-stat">
+        <div class="stat-card temp-stat group">
+          <div class="stat-icon">🔺</div>
           <div class="stat-label">🌡️ Temp Max</div>
           <div class="stat-value" id="tempMaxValue">—</div>
         </div>
-        <div class="stat-card temp-stat">
+        <div class="stat-card temp-stat group">
+          <div class="stat-icon">🔻</div>
           <div class="stat-label">🌡️ Temp Min</div>
           <div class="stat-value" id="tempMinValue">—</div>
         </div>
-        <div class="stat-card temp-stat">
+        <div class="stat-card temp-stat group">
+          <div class="stat-icon">🌡️</div>
           <div class="stat-label">🌡️ Avg Temp</div>
           <div class="stat-value" id="tempAvgValue">—</div>
         </div>
       </div>
 
+      <!-- ═══ CHARTS ═══ -->
       <div class="charts-grid">
         <div class="chart-card">
           <div class="chart-header">
-            <span class="chart-title">📈 BPM Log — Last 30 Readings</span>
+            <span class="chart-title">
+              <span style="color: var(--color-red); margin-right: 8px;">●</span> BPM Log — Last 30 Readings
+            </span>
           </div>
-          <canvas id="bpmChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="bpmChart"></canvas>
+          </div>
         </div>
         <div class="chart-card temp-chart-card">
           <div class="chart-header">
-            <span class="chart-title"
-              >🌡️ Temperature Log — Last 30 Readings</span
-            >
+            <span class="chart-title">
+              <span style="color: var(--color-orange); margin-right: 8px;">●</span> Temperature Log — Last 30 Readings
+            </span>
           </div>
-          <canvas id="tempChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="tempChart"></canvas>
+          </div>
         </div>
       </div>
 
-      <div class="footer">
-        VITALSYNC v1.0 — Real-time Heart Rate & Temperature Monitor by x606
-      </div>
+      <!-- ═══ FOOTER ═══ -->
+      <footer class="footer-bar">
+        <span style="color: var(--color-red)">♥</span> VITALSYNC v1.0 — Real-time Heart Rate & Temperature Monitor by
+        <span style="color: var(--color-text); font-weight: 600;">x606</span>
+      </footer>
+
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>

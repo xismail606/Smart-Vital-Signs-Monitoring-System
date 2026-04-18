@@ -4,6 +4,11 @@
 
 const socket = io();
 
+// ── CSS Variable Helper ──
+function getCSS(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 // ── DOM Cache ──
 const dom = {
   bpmValue:        document.getElementById('bpmValue'),
@@ -66,11 +71,11 @@ const chart = new Chart(ctx, {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "#111118",
-        borderColor: "#ff2d55",
+        backgroundColor: getCSS('--tooltip-bg'),
+        borderColor: getCSS('--color-red'),
         borderWidth: 1,
-        titleColor: "#ff2d55",
-        bodyColor: "#e8e8f0",
+        titleColor: getCSS('--color-red'),
+        bodyColor: getCSS('--tooltip-text'),
         titleFont: { family: "Space Mono" },
         bodyFont: { family: "Space Mono" },
         displayColors: false,
@@ -82,8 +87,8 @@ const chart = new Chart(ctx, {
     scales: {
       x: { display: false },
       y: {
-        grid: { color: "rgba(255,255,255,0.04)" },
-        ticks: { color: "#5a5a7a", font: { family: "Space Mono", size: 11 } },
+        grid: { color: getCSS('--chart-grid') },
+        ticks: { color: getCSS('--chart-tick'), font: { family: "Space Mono", size: 11 } },
         suggestedMin: 50,
         suggestedMax: 120,
       },
@@ -123,11 +128,11 @@ const tempChart = new Chart(tempCtx, {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "#111118",
-        borderColor: "#ff9500",
+        backgroundColor: getCSS('--tooltip-bg'),
+        borderColor: getCSS('--color-orange'),
         borderWidth: 1,
-        titleColor: "#ff9500",
-        bodyColor: "#e8e8f0",
+        titleColor: getCSS('--color-orange'),
+        bodyColor: getCSS('--tooltip-text'),
         titleFont: { family: "Space Mono" },
         bodyFont: { family: "Space Mono" },
         displayColors: false,
@@ -139,9 +144,9 @@ const tempChart = new Chart(tempCtx, {
     scales: {
       x: { display: false },
       y: {
-        grid: { color: "rgba(255,255,255,0.04)" },
+        grid: { color: getCSS('--chart-grid') },
         ticks: {
-          color: "#5a5a7a",
+          color: getCSS('--chart-tick'),
           font: { family: "Space Mono", size: 11 },
           callback: (v) => v + "°",
         },
@@ -154,6 +159,8 @@ const tempChart = new Chart(tempCtx, {
 
 // ── State ──
 let isPaused = false;
+let bpmMonitoring = true;   // independent BPM toggle
+let tempMonitoring = true;  // independent Temp toggle
 let maxBPM = 0,
   minBPM = Infinity;
 let allBPMs = [];
@@ -278,7 +285,7 @@ function resetDashboard() {
   chart.update();
 
   // Reset UI elements
-  dom.bpmValue.textContent = "---";
+  dom.bpmValue.textContent = "--";
   dom.statusValue.textContent = "—";
   dom.statusValue.className = "stat-value";
   dom.maxValue.textContent = "—";
@@ -425,13 +432,13 @@ socket.on("arduino-status", ({ status }) => {
 
 socket.on("bpm", ({ bpm, time }) => {
   lastBPM = bpm;
-  if (!isPaused) updateDashboard(bpm, time);
+  if (!isPaused && bpmMonitoring) updateDashboard(bpm, time);
 });
 
 // ── Temperature Socket Event ──
 socket.on("temperature", ({ temp, time }) => {
   lastTemp = temp;
-  if (!isPaused) updateTemperature(temp, time);
+  if (!isPaused && tempMonitoring) updateTemperature(temp, time);
 });
 
 // ── Update Dashboard ──
@@ -575,4 +582,122 @@ function updateTemperature(temp, time) {
     tempDataPoints.shift();
   }
   tempChart.update();
+}
+
+// ══════════════════════════════════════════════
+//  Theme Toggle
+// ══════════════════════════════════════════════
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.classList.toggle('dark');
+
+  localStorage.setItem('vitalsync-theme', isDark ? 'dark' : 'light');
+
+  // Update theme icon
+  const icon = document.getElementById('themeIcon');
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+
+  // Update meta theme-color
+  const meta = document.getElementById('metaThemeColor');
+  if (meta) meta.setAttribute('content', isDark ? '#0a0a0f' : '#f0f2f8');
+
+  // Update chart colors after CSS vars have changed
+  requestAnimationFrame(() => updateChartTheme());
+}
+
+function updateChartTheme() {
+  const gridColor = getCSS('--chart-grid');
+  const tickColor = getCSS('--chart-tick');
+  const tooltipBg = getCSS('--tooltip-bg');
+  const tooltipText = getCSS('--tooltip-text');
+  const red = getCSS('--color-red');
+  const orange = getCSS('--color-orange');
+
+  // BPM chart
+  chart.options.scales.y.grid.color = gridColor;
+  chart.options.scales.y.ticks.color = tickColor;
+  chart.options.plugins.tooltip.backgroundColor = tooltipBg;
+  chart.options.plugins.tooltip.titleColor = red;
+  chart.options.plugins.tooltip.bodyColor = tooltipText;
+  chart.options.plugins.tooltip.borderColor = red;
+  chart.data.datasets[0].borderColor = red;
+  chart.data.datasets[0].pointBackgroundColor = red;
+  chart.data.datasets[0].pointHoverBackgroundColor = tooltipBg;
+  chart.update('none');
+
+  // Temp chart
+  tempChart.options.scales.y.grid.color = gridColor;
+  tempChart.options.scales.y.ticks.color = tickColor;
+  tempChart.options.plugins.tooltip.backgroundColor = tooltipBg;
+  tempChart.options.plugins.tooltip.titleColor = orange;
+  tempChart.options.plugins.tooltip.bodyColor = tooltipText;
+  tempChart.options.plugins.tooltip.borderColor = orange;
+  tempChart.data.datasets[0].borderColor = orange;
+  tempChart.data.datasets[0].pointBackgroundColor = orange;
+  tempChart.data.datasets[0].pointHoverBackgroundColor = tooltipBg;
+  tempChart.update('none');
+}
+
+// Initialize theme icon on load
+(function initThemeIcon() {
+  const isDark = document.documentElement.classList.contains('dark');
+  const icon = document.getElementById('themeIcon');
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+})();
+
+// ══════════════════════════════════════════════
+//  Sensor Toggle Controls
+// ══════════════════════════════════════════════
+
+function toggleBpmMonitoring() {
+  bpmMonitoring = !bpmMonitoring;
+
+  // Send command to Arduino
+  socket.emit('control', bpmMonitoring ? 'resume_bpm' : 'pause_bpm');
+
+  const btn = document.getElementById('bpmToggle');
+  const text = document.getElementById('bpmToggleText');
+  const overlay = document.getElementById('bpmStoppedOverlay');
+
+  if (bpmMonitoring) {
+    btn.classList.remove('stopped');
+    btn.classList.add('active');
+    text.textContent = 'ON';
+    overlay.classList.remove('visible');
+  } else {
+    btn.classList.remove('active');
+    btn.classList.add('stopped');
+    text.textContent = 'OFF';
+    overlay.classList.add('visible');
+    // Clear alert when stopped
+    dom.bpmCard.classList.remove('alert');
+    dom.alertBanner.classList.remove('visible');
+  }
+}
+
+function toggleTempMonitoring() {
+  tempMonitoring = !tempMonitoring;
+
+  // Send command to Arduino
+  socket.emit('control', tempMonitoring ? 'resume_temp' : 'pause_temp');
+
+  const btn = document.getElementById('tempToggle');
+  const text = document.getElementById('tempToggleText');
+  const overlay = document.getElementById('tempStoppedOverlay');
+
+  if (tempMonitoring) {
+    btn.classList.remove('stopped');
+    btn.classList.add('active');
+    text.textContent = 'ON';
+    overlay.classList.remove('visible');
+  } else {
+    btn.classList.remove('active');
+    btn.classList.add('stopped');
+    text.textContent = 'OFF';
+    overlay.classList.add('visible');
+    // Clear fever alert when stopped
+    dom.tempCard.classList.remove('fever');
+    dom.feverBanner.classList.remove('visible');
+  }
 }
