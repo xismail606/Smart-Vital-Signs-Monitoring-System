@@ -29,10 +29,14 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: "Cairo", sans-serif;
+  font-family: "Inter", sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
@@ -132,7 +136,7 @@ header {
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 0.85rem;
-  font-family: "Cairo", sans-serif;
+  font-family: "Inter", sans-serif;
   color: var(--text);
   cursor: pointer;
   transition: all 0.25s;

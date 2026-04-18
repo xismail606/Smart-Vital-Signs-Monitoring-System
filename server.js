@@ -19,6 +19,8 @@ const RETRY_DELAY = 3000;
 
 let serialPort;
 let retryCount = 0;
+let intentionalClose = false;
+let serialConnected = false;
 
 // ── Serial Connection with retry limit ──
 function connectSerial() {
@@ -34,6 +36,8 @@ function connectSerial() {
 
     serialPort.on('open', () => {
       retryCount = 0;
+      serialConnected = true;
+      intentionalClose = false;
       console.log(`✅ Serial Port open on ${PORT_NAME}`);
       io.emit('serial-status', { connected: true });
     });
@@ -67,8 +71,13 @@ function connectSerial() {
     });
 
     serialPort.on('close', () => {
-      console.log('🔌 Serial closed - reconnecting...');
+      serialConnected = false;
       io.emit('serial-status', { connected: false });
+      if (intentionalClose) {
+        console.log('🔌 Serial closed (intentional)');
+        return;
+      }
+      console.log('🔌 Serial closed - reconnecting...');
       retryCount++;
       setTimeout(connectSerial, RETRY_DELAY);
     });
@@ -87,6 +96,7 @@ const VALID_COMMANDS = ['pause', 'resume', 'reset'];
 
 io.on('connection', (socket) => {
   console.log('🌐 Browser connected:', socket.id);
+  socket.emit('serial-status', { connected: serialConnected });
 
   socket.on('control', (cmd) => {
     if (!VALID_COMMANDS.includes(cmd)) {
@@ -108,3 +118,19 @@ server.listen(SERVER_PORT, () => {
   console.log(`🚀 Server running on http://localhost:${SERVER_PORT}`);
   connectSerial();
 });
+
+// ── Graceful Shutdown ──
+function shutdown() {
+  console.log('\n🛑 Shutting down...');
+  intentionalClose = true;
+  if (serialPort && serialPort.isOpen) {
+    serialPort.close(() => {
+      console.log('✅ Serial port closed');
+      server.close(() => process.exit(0));
+    });
+  } else {
+    server.close(() => process.exit(0));
+  }
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

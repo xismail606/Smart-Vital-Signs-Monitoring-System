@@ -4,6 +4,35 @@
 
 const socket = io();
 
+// ── DOM Cache ──
+const dom = {
+  bpmValue:        document.getElementById('bpmValue'),
+  bpmCard:         document.getElementById('bpmCard'),
+  alertBanner:     document.getElementById('alertBanner'),
+  statusDot:       document.getElementById('statusDot'),
+  statusText:      document.getElementById('statusText'),
+  statusValue:     document.getElementById('statusValue'),
+  maxValue:        document.getElementById('maxValue'),
+  minValue:        document.getElementById('minValue'),
+  avgValue:        document.getElementById('avgValue'),
+  readingCount:    document.getElementById('readingCount'),
+  waitingMsg:      document.getElementById('waitingMsg'),
+  pauseBtn:        document.getElementById('pauseBtn'),
+  pauseIcon:       document.getElementById('pauseIcon'),
+  pauseText:       document.getElementById('pauseText'),
+  pausedBadge:     document.getElementById('pausedBadge'),
+  fsIcon:          document.getElementById('fsIcon'),
+  sessionStart:    document.getElementById('sessionStart'),
+  sessionDuration: document.getElementById('sessionDuration'),
+  tempValue:       document.getElementById('tempValue'),
+  tempStatus:      document.getElementById('tempStatus'),
+  tempCard:        document.getElementById('tempCard'),
+  feverBanner:     document.getElementById('feverBanner'),
+  tempMaxValue:    document.getElementById('tempMaxValue'),
+  tempMinValue:    document.getElementById('tempMinValue'),
+  tempAvgValue:    document.getElementById('tempAvgValue'),
+};
+
 // ── Chart Setup ──
 const MAX_POINTS = 30;
 const labels = [],
@@ -128,6 +157,7 @@ let isPaused = false;
 let maxBPM = 0,
   minBPM = Infinity;
 let allBPMs = [];
+let allTimestamps = [];
 let hasData = false,
   lastBPM = null;
 let sessionStart = null;
@@ -165,7 +195,7 @@ function playAlertBeep() {
 // ── Session Timer ──
 function startSessionTimer() {
   sessionStart = Date.now();
-  document.getElementById("sessionStart").textContent = formatTime(
+  dom.sessionStart.textContent = formatTime(
     new Date(sessionStart),
   );
 
@@ -173,7 +203,7 @@ function startSessionTimer() {
     const elapsed = Date.now() - sessionStart;
     const mins = Math.floor(elapsed / 60000);
     const secs = Math.floor((elapsed % 60000) / 1000);
-    document.getElementById("sessionDuration").textContent =
+    dom.sessionDuration.textContent =
       `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }, 1000);
 }
@@ -187,25 +217,24 @@ function togglePause() {
   isPaused = !isPaused;
   socket.emit("control", isPaused ? "pause" : "resume");
 
-  const btn = document.getElementById("pauseBtn");
-  const dot = document.getElementById("statusDot");
-  const badge = document.getElementById("pausedBadge");
-  const card = document.getElementById("bpmCard");
-  const val = document.getElementById("bpmValue");
-
+  const btn = dom.pauseBtn;
+  const dot = dom.statusDot;
+  const badge = dom.pausedBadge;
+  const card = dom.bpmCard;
+  const val = dom.bpmValue;
   if (isPaused) {
     btn.classList.add("paused");
-    document.getElementById("pauseIcon").textContent = "▶";
-    document.getElementById("pauseText").textContent = "Resume";
+    dom.pauseIcon.textContent = "▶";
+    dom.pauseText.textContent = "Resume";
     dot.classList.replace("active", "paused");
     badge.classList.add("visible");
     card.classList.add("paused");
     val.classList.add("paused-color");
-    document.getElementById("statusText").textContent = "Paused";
+    dom.statusText.textContent = "Paused";
   } else {
     btn.classList.remove("paused");
-    document.getElementById("pauseIcon").textContent = "⏸";
-    document.getElementById("pauseText").textContent = "Pause";
+    dom.pauseIcon.textContent = "⏸";
+    dom.pauseText.textContent = "Pause";
     dot.classList.replace("paused", "active");
     badge.classList.remove("visible");
     card.classList.remove("paused");
@@ -218,15 +247,15 @@ function togglePause() {
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
-    document.getElementById("fsIcon").textContent = "🔲";
+    dom.fsIcon.textContent = "🔲";
   } else {
     document.exitFullscreen();
-    document.getElementById("fsIcon").textContent = "⛶";
+    dom.fsIcon.textContent = "⛶";
   }
 }
 
 document.addEventListener("fullscreenchange", () => {
-  document.getElementById("fsIcon").textContent = document.fullscreenElement
+  dom.fsIcon.textContent = document.fullscreenElement
     ? "🔲"
     : "⛶";
 });
@@ -237,6 +266,7 @@ function resetDashboard() {
   maxBPM = 0;
   minBPM = Infinity;
   allBPMs = [];
+  allTimestamps = [];
   hasData = false;
   lastBPM = null;
 
@@ -248,16 +278,16 @@ function resetDashboard() {
   chart.update();
 
   // Reset UI elements
-  document.getElementById("bpmValue").textContent = "---";
-  document.getElementById("statusValue").textContent = "—";
-  document.getElementById("statusValue").className = "stat-value";
-  document.getElementById("maxValue").textContent = "—";
-  document.getElementById("minValue").textContent = "—";
-  document.getElementById("avgValue").textContent = "—";
-  document.getElementById("readingCount").textContent = "0";
-  document.getElementById("waitingMsg").style.display = "";
-  document.getElementById("bpmCard").classList.remove("alert");
-  document.getElementById("alertBanner").classList.remove("visible");
+  dom.bpmValue.textContent = "---";
+  dom.statusValue.textContent = "—";
+  dom.statusValue.className = "stat-value";
+  dom.maxValue.textContent = "—";
+  dom.minValue.textContent = "—";
+  dom.avgValue.textContent = "—";
+  dom.readingCount.textContent = "0";
+  dom.waitingMsg.style.display = "";
+  dom.bpmCard.classList.remove("alert");
+  dom.alertBanner.classList.remove("visible");
 
   // Reset temperature state
   lastTemp = null;
@@ -269,13 +299,13 @@ function resetDashboard() {
   tempChart.options.scales.y.suggestedMin = 30;
   tempChart.options.scales.y.suggestedMax = 42;
   tempChart.update();
-  document.getElementById("tempValue").textContent = "--.-";
-  document.getElementById("tempStatus").textContent = "Waiting for sensor...";
-  document.getElementById("tempMaxValue").textContent = "—";
-  document.getElementById("tempMinValue").textContent = "—";
-  document.getElementById("tempAvgValue").textContent = "—";
-  document.getElementById("tempCard").classList.remove("fever");
-  document.getElementById("feverBanner").classList.remove("visible");
+  dom.tempValue.textContent = "--.-";
+  dom.tempStatus.textContent = "Waiting for sensor...";
+  dom.tempMaxValue.textContent = "—";
+  dom.tempMinValue.textContent = "—";
+  dom.tempAvgValue.textContent = "—";
+  dom.tempCard.classList.remove("fever");
+  dom.feverBanner.classList.remove("visible");
 
   // Reset session timer
   if (sessionTimerInterval) clearInterval(sessionTimerInterval);
@@ -287,22 +317,21 @@ function resetDashboard() {
   // If paused, unpause
   if (isPaused) {
     isPaused = false;
-    document.getElementById("pauseBtn").classList.remove("paused");
-    document.getElementById("pauseIcon").textContent = "⏸";
-    document.getElementById("pauseText").textContent = "Pause";
-    document.getElementById("pausedBadge").classList.remove("visible");
-    document.getElementById("bpmCard").classList.remove("paused");
-    document.getElementById("bpmValue").classList.remove("paused-color");
-  }
+    dom.pauseBtn.classList.remove("paused");
+    dom.pauseIcon.textContent = "⏸";
+    dom.pauseText.textContent = "Pause";
+    dom.pausedBadge.classList.remove("visible");
+    dom.bpmCard.classList.remove("paused");
+    dom.bpmValue.classList.remove("paused-color");  }
 
   // Send reset to server → Arduino
   socket.emit("control", "reset");
 
   // Update status
-  const dot = document.getElementById("statusDot");
+  const dot = dom.statusDot;
   dot.classList.remove("paused");
   dot.classList.add("active");
-  document.getElementById("statusText").textContent =
+  dom.statusText.textContent =
     "Session reset — waiting for data...";
 }
 
@@ -310,14 +339,15 @@ function resetDashboard() {
 function exportCSV() {
   if (allBPMs.length === 0) return;
 
-  let csv = "Index,BPM,Status,Temperature(°C)\n";
+  let csv = "Index,BPM,Status,Temperature(°C),Timestamp\n";
   allBPMs.forEach((bpm, i) => {
     let status = "Normal";
     if (bpm < 60) status = "Low";
     else if (bpm > 140) status = "Danger";
     else if (bpm > 100) status = "High";
     const temp = allTemps[i] !== undefined ? allTemps[i] : "N/A";
-    csv += `${i + 1},${bpm},${status},${temp}\n`;
+    const ts = allTimestamps[i] ? new Date(allTimestamps[i]).toLocaleTimeString() : "N/A";
+    csv += `${i + 1},${bpm},${status},${temp},${ts}\n`;
   });
 
   csv += `\nMin BPM,${minBPM === Infinity ? "N/A" : minBPM}\n`;
@@ -342,22 +372,21 @@ function exportCSV() {
 
 // ── Socket Events ──
 socket.on("connect", () => {
-  document.getElementById("statusDot").classList.add("active");
-  document.getElementById("statusText").textContent = "Connected to server";
+  dom.statusDot.classList.add("active");
+  dom.statusText.textContent = "Connected to server";
 });
 
 socket.on("disconnect", () => {
-  document.getElementById("statusDot").classList.remove("active", "paused");
-  document.getElementById("statusText").textContent = "Disconnected!";
+  dom.statusDot.classList.remove("active", "paused");
+  dom.statusText.textContent = "Disconnected!";
 });
 
 socket.on("serial-status", ({ connected, error }) => {
-  const dot = document.getElementById("statusDot");
   if (connected) {
-    dot.classList.add("active");
-    document.getElementById("statusText").textContent = "Sensor connected";
+    dom.statusDot.classList.add("active");
+    dom.statusText.textContent = "Sensor connected";
   } else if (error) {
-    document.getElementById("statusText").textContent = `Error: ${error}`;
+    dom.statusText.textContent = `Error: ${error}`;
   }
 });
 
@@ -367,26 +396,30 @@ socket.on("arduino-status", ({ status }) => {
     CALIBRATING: "Calibrating sensor...",
     READY: "Sensor ready",
     NO_SIGNAL: "No signal — place finger",
+    NO_TEMP_SENSOR: "No temperature sensor detected",
     PAUSED: "Arduino paused",
     RESUMED: "Arduino resumed",
     RESET: "Session reset",
-    SLOW: "Low heart rate",
+    LOW: "Low heart rate",
     NORMAL: "Normal heart rate",
     HIGH: "High heart rate",
   };
-  const dot = document.getElementById("statusDot");
+  const dot = dom.statusDot;
   const msg = statusMap[status] || status;
 
   if (status === "NO_SIGNAL") {
     dot.classList.remove("active");
     dot.classList.add("paused");
-    document.getElementById("statusText").textContent = msg;
+    dom.statusText.textContent = msg;
+  } else if (status === "NO_TEMP_SENSOR") {
+    dom.tempStatus.textContent = "Sensor not found";
+    dom.tempStatus.className = "temp-status low";
   } else if (status === "READY" || status === "RESUMED" || status === "RESET") {
     dot.classList.remove("paused");
     dot.classList.add("active");
-    document.getElementById("statusText").textContent = msg;
+    dom.statusText.textContent = msg;
   } else if (status === "CALIBRATING") {
-    document.getElementById("statusText").textContent = msg;
+    dom.statusText.textContent = msg;
   }
 });
 
@@ -408,12 +441,12 @@ function updateDashboard(bpm, time) {
   // Start session timer on first data
   if (!hasData) {
     hasData = true;
-    document.getElementById("waitingMsg").style.display = "none";
+    dom.waitingMsg.style.display = "none";
     startSessionTimer();
   }
 
   // Animate BPM value
-  const bpmEl = document.getElementById("bpmValue");
+  const bpmEl = dom.bpmValue;
   bpmEl.textContent = bpm;
   bpmEl.classList.remove("beat");
   void bpmEl.offsetWidth;
@@ -421,8 +454,8 @@ function updateDashboard(bpm, time) {
 
   // Alert for high BPM
   const isHigh = bpm > 100;
-  document.getElementById("bpmCard").classList.toggle("alert", isHigh);
-  document.getElementById("alertBanner").classList.toggle("visible", isHigh);
+  dom.bpmCard.classList.toggle("alert", isHigh);
+  dom.alertBanner.classList.toggle("visible", isHigh);
 
   if (isHigh && Date.now() - lastAlertTime > 5000) {
     playAlertBeep();
@@ -430,7 +463,7 @@ function updateDashboard(bpm, time) {
   }
 
   // Status
-  const s = document.getElementById("statusValue");
+  const s = dom.statusValue;
   if (bpm < 60) {
     s.textContent = "Low";
     s.className = "stat-value caution";
@@ -448,18 +481,19 @@ function updateDashboard(bpm, time) {
   // Max / Min
   if (bpm > maxBPM) {
     maxBPM = bpm;
-    document.getElementById("maxValue").textContent = maxBPM;
+    dom.maxValue.textContent = maxBPM;
   }
   if (bpm < minBPM) {
     minBPM = bpm;
-    document.getElementById("minValue").textContent = minBPM;
+    dom.minValue.textContent = minBPM;
   }
 
   // Average
   allBPMs.push(bpm);
-  if (allBPMs.length > 200) allBPMs.shift();
+  allTimestamps.push(time);
+  if (allBPMs.length > 200) { allBPMs.shift(); allTimestamps.shift(); }
   const avg = Math.round(allBPMs.reduce((a, b) => a + b, 0) / allBPMs.length);
-  document.getElementById("avgValue").textContent = avg;
+  dom.avgValue.textContent = avg;
 
   // Chart — dynamic Y axis
   const currentMin = Math.min(...dataPoints, bpm);
@@ -478,27 +512,27 @@ function updateDashboard(bpm, time) {
   chart.update();
 
   // Reading count
-  document.getElementById("readingCount").textContent = allBPMs.length;
+  dom.readingCount.textContent = allBPMs.length;
 
   // Status text
   if (!isPaused) {
-    document.getElementById("statusText").textContent = `Last update ${label}`;
+    dom.statusText.textContent = `Last update ${label}`;
   }
 }
 
 // ── Update Temperature ──
 function updateTemperature(temp, time) {
   // Update display value
-  const tempEl = document.getElementById("tempValue");
+  const tempEl = dom.tempValue;
   tempEl.textContent = temp.toFixed(1);
 
   // Fever detection (> 37.5°C)
   const isFever = temp > 37.5;
-  document.getElementById("tempCard").classList.toggle("fever", isFever);
-  document.getElementById("feverBanner").classList.toggle("visible", isFever);
+  dom.tempCard.classList.toggle("fever", isFever);
+  dom.feverBanner.classList.toggle("visible", isFever);
 
   // Temperature status
-  const ts = document.getElementById("tempStatus");
+  const ts = dom.tempStatus;
   if (temp < 36.0) {
     ts.textContent = "Low";
     ts.className = "temp-status low";
@@ -513,18 +547,18 @@ function updateTemperature(temp, time) {
   // Max / Min
   if (temp > maxTemp) {
     maxTemp = temp;
-    document.getElementById("tempMaxValue").textContent = maxTemp.toFixed(1) + "°";
+    dom.tempMaxValue.textContent = maxTemp.toFixed(1) + "°";
   }
   if (temp < minTemp) {
     minTemp = temp;
-    document.getElementById("tempMinValue").textContent = minTemp.toFixed(1) + "°";
+    dom.tempMinValue.textContent = minTemp.toFixed(1) + "°";
   }
 
   // Store & Average
   allTemps.push(temp);
   if (allTemps.length > 200) allTemps.shift();
   const avgTemp = (allTemps.reduce((a, b) => a + b, 0) / allTemps.length).toFixed(1);
-  document.getElementById("tempAvgValue").textContent = avgTemp + "°";
+  dom.tempAvgValue.textContent = avgTemp + "°";
 
   // Chart — dynamic Y axis
   const cMin = Math.min(...tempDataPoints, temp);

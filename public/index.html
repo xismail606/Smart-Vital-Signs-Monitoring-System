@@ -22,6 +22,18 @@
     <script src="/socket.io/socket.io.js"></script>
   </head>
   <body>
+    <noscript>
+      <p
+        style="
+          color: #fff;
+          text-align: center;
+          padding: 40px;
+          font-size: 1.2rem;
+        "
+      >
+        JavaScript is required to run VitalSync Dashboard.
+      </p>
+    </noscript>
     <div class="container">
       <header>
         <div class="logo">
@@ -176,12 +188,10 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script>
-      // Chart.js CDN fallback
       if (typeof Chart === "undefined") {
-        const s = document.createElement("script");
-        s.src =
-          "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
-        document.head.appendChild(s);
+        document.write(
+          '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>',
+        );
       }
     </script>
     <script src="app.js"></script>
